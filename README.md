@@ -11,4 +11,9 @@ Run :
 
 npm run dev
 
+Login:
+
+username:user
+password:1234
+
 
