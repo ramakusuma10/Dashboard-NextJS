@@ -1,101 +1,186 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { logout } from '@/app/libs/auth';
+import { Layout, Dropdown, Menu, Input, Button, Form } from 'antd';
+import { Table } from 'antd';
+import type { TableColumnsType} from 'antd';
+import axios from 'axios';
+
+interface University {
+  alpha_two_code: string;
+  country: string;
+  state_province: string | null;
+  domains: string[];
+  name: string;
+  web_pages: string[];
+}
+
+interface UniversityData {
+  key: React.Key;
+  name: string;
+  country: string;
+  state_province: string | null;
+  alpha_two_code: string;
+  domains: string[];
+  web_pages: string[];
+}
+
+const columns: TableColumnsType<UniversityData> = [
+  {
+    title: 'Name',
+    dataIndex: 'name',
+    sorter: (a, b) => a.name.localeCompare(b.name),
+    sortDirections: ['ascend', 'descend'],
+  },
+  {
+    title: 'Country',
+    dataIndex: 'country',
+    sorter: (a, b) => a.country.localeCompare(b.country),
+  },
+  {
+    title: 'Province',
+    dataIndex: 'state_province',
+    sorter: (a, b) => (a.state_province || '').localeCompare(b.state_province || ''),
+  },
+  {
+    title: 'Code Alpha',
+    dataIndex: 'alpha_two_code',
+    sorter: (a, b) => a.alpha_two_code.localeCompare(b.alpha_two_code),
+  },
+  {
+    title: 'Domain',
+    dataIndex: 'domains',
+    render: (domains: string[]) => domains.join(', '), // Joining domains for display
+  },
+  {
+    title: 'Web Page',
+    dataIndex: 'web_pages',
+    render: (web_pages: string[]) => (
+      <a href={web_pages[0]} target="_blank" rel="noopener noreferrer">
+        Visit
+      </a>
+    ),
+  },
+];
+
+const { Header } = Layout;
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const [searchText, setSearchText] = useState('');
+  const [countryText, setCountryText] = useState('');
+  const [universities, setUniversities] = useState<UniversityData[]>([]);
+
+  const handleLogout = () => {
+    document.cookie = "authToken=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/"; // Remove token from cookies
+    logout();
+    router.push('/login');
+  };
+
+  useEffect(() => {
+    const token = document.cookie.split('; ').find(row => row.startsWith('authToken='));
+    if (!token) {
+      router.push('/login'); // Redirect to login if no token
+    }
+  }, [router]);
+
+  const menu = (
+    <Menu>
+      <Menu.Item disabled>
+        Hai, User
+      </Menu.Item>
+      <Menu.Divider />
+      <Menu.Item key="logout" onClick={handleLogout}>
+        Logout
+      </Menu.Item>
+    </Menu>
+  );
+
+  const handleSearch = async () => {
+    if (searchText && countryText) {
+      try {
+        const response = await axios.get(`http://universities.hipolabs.com/search`, {
+          params: { name: searchText, country: countryText },
+        });
+        const data: University[] = response.data;
+        
+        const formattedData: UniversityData[] = data.map((uni, index) => ({
+          key: index, // Using index as key (you might want to change this based on your unique identifiers)
+          name: uni.name,
+          country: uni.country,
+          state_province: uni.state_province,
+          alpha_two_code: uni.alpha_two_code,
+          domains: uni.domains,
+          web_pages: uni.web_pages,
+        }));
+        
+        setUniversities(formattedData);
+      } catch (error) {
+        console.error('Error fetching universities:', error);
+        setUniversities([]); // Clear data on error
+      }
+    } else {
+      setUniversities([]); // Clear the data if search or country is empty
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div>
+      <Layout>
+        <Header className="bg-blue-500 shadow-md fixed top-0 left-0 right-0 z-10 items-center px-4 w-full">
+          <div className="flex items-center justify-between">
+            <div className="logo" style={{ color: 'white', fontSize: '24px', fontWeight: 'bold' }}>
+              Dashboard
+            </div>
+            <Dropdown overlay={menu} trigger={['click']}>
+              <img
+                src="/avatar.png"
+                alt="User Avatar"
+                className="rounded-full w-10 h-10 mx-1 cursor-pointer hover:opacity-80"
+              />
+            </Dropdown>
+          </div>
+        </Header>
+      </Layout>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+      <div className="flex flex-col mt-[100px] items-center">
+        <Form
+          layout="inline"
+          onFinish={handleSearch}
+          className="w-[1000px] mb-4 flex justify-end"
+        >
+          <Form.Item>
+            <Input
+              placeholder="Search by name"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              className="w-[200px]"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          </Form.Item>
+          <Form.Item>
+            <Input
+              placeholder="Search by country"
+              value={countryText}
+              onChange={(e) => setCountryText(e.target.value)}
+              className="w-[200px]"
+            />
+          </Form.Item>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" className='mr-[-15px] w-[100px]'>
+              Search
+            </Button>
+          </Form.Item>
+        </Form>
+        
+        <Table<UniversityData>
+          columns={columns}
+          dataSource={universities}
+          className="w-[1000px] bg-white rounded-lg"
+          pagination={{ pageSize: 5 }}
+        />
+      </div>
     </div>
   );
 }
