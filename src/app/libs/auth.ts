@@ -1,5 +1,5 @@
 export const login = (username: string, password: string) => {
-    if (username === 'ramakusuma' && password === 'kaede') {
+    if (username === 'user' && password === '1234') {
       localStorage.setItem('authToken', 'authenticated');
       return true;
     }
